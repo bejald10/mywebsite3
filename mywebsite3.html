@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My First Website</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      overflow: hidden;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+
+    .message {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #fdfdfd;
+    }
+
+    .timestamp {
+      font-size: 0.9em;
+      color: #888;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    #savedMessages {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<div class="card">
+  <h3>Hello everyone this is my first website</h3>
+  <p>I am excited about this! My dad and I made it with a little help from AI. It may not be perfect, but you can send me a message below!</p>
+
+  <button onclick="saveMessage()">Save your message!</button>
+
+  <div style="margin-top: 10px;">
+    <label for="message">Your message:</label><br>
+    <textarea id="message" rows="4" placeholder="Write your message here..."></textarea>
+  </div>
+
+  <div id="savedMessages" style="margin-top: 15px;"></div>
+</div>
+
+<script>
+  // Particle background
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let width = canvas.width = window.innerWidth;
+  let height = canvas.height = window.innerHeight;
+
+  const particleCount = 50;
+  const radius = 3;
+  const particles = [];
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
+      this.dx = (Math.random() - 0.5) * 0.5;
+      this.dy = (Math.random() - 0.5) * 0.5;
+      this.color = Math.random() > 0.5 ? 'red' : 'blue';
+    }
+
+    move() {
+      this.x += this.dx;
+      this.y += this.dy;
+
+      // bounce off walls
+      if (this.x < 0 || this.x > width) this.dx *= -1;
+      if (this.y < 0 || this.y > height) this.dy *= -1;
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < particleCount; i++) {
+    particles.push(new Particle());
+  }
+
+  function distance(p1, p2) {
+    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+
+    for (let i = 0; i < particles.length; i++) {
+      const p1 = particles[i];
+      p1.move();
+
+      // Check for interactions
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const d = distance(p1, p2);
+
+        if (d < 80) {
+          if (p1.color === p2.color) {
+            // attraction
+            p1.dx += (p2.x - p1.x) * 0.0001;
+            p1.dy += (p2.y - p1.y) * 0.0001;
+            p2.dx += (p1.x - p2.x) * 0.0001;
+            p2.dy += (p1.y - p2.y) * 0.0001;
+          } else {
+            // repulsion
+            p1.dx -= (p2.x - p1.x) * 0.0002;
+            p1.dy -= (p2.y - p1.y) * 0.0002;
+            p2.dx -= (p1.x - p2.x) * 0.0002;
+            p2.dy -= (p1.y - p2.y) * 0.0002;
+          }
+        }
+      }
+
+      p1.draw();
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  window.addEventListener('resize', () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  });
+
+  // Message functions
+  window.onload = function () {
+    loadMessages();
+  };
+
+  function saveMessage() {
+    const messageBox = document.getElementById("message");
+    const message = messageBox.value.trim();
+
+    if (message === "") {
+      alert("Please enter a message before clicking the button.");
+      return;
+    }
+
+    const timestamp = new Date().toLocaleString();
+    const saved = JSON.parse(localStorage.getItem("messages") || "[]");
+
+    const newEntry = { text: message, time: timestamp };
+    saved.push(newEntry);
+
+    localStorage.setItem("messages", JSON.stringify(saved));
+    messageBox.value = "";
+
+    displayMessage(newEntry);
+  }
+
+  function loadMessages() {
+    const saved = JSON.parse(localStorage.getItem("messages") || "[]");
+    saved.forEach(displayMessage);
+  }
+
+  function displayMessage(entry) {
+    const displayDiv = document.getElementById("savedMessages");
+    const msg = document.createElement("div");
+    msg.className = "message";
+
+    msg.innerHTML = `<span class="timestamp">${entry.time}</span>${entry.text}`;
+    displayDiv.appendChild(msg);
+    displayDiv.scrollTop = displayDiv.scrollHeight;
+  }
+</script>
+
+</body>
+</html>
